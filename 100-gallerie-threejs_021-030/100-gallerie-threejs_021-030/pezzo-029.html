@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>029 · Tunnel — three.js</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* layout: indice dei 100 pezzi a sinistra, palco a destra, codice sotto il palco */
+:root{--bg:#15131a;--panel:#1d1a24;--line:#322d3d;--ink:#efe9e1;--mute:#9a93a6;--acc:#ff6b4a;--acc2:#ffc145;--disp:"Bricolage Grotesque","Trebuchet MS",sans-serif;--body:"Instrument Sans","Segoe UI",sans-serif;--mono:"JetBrains Mono",Consolas,monospace;color-scheme:dark}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--body)}
+button,input{font:inherit;color:inherit}button{cursor:pointer}
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+.app{display:grid;grid-template-columns:330px minmax(0,1fr);height:100%}
+.side{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);background:var(--panel)}
+.side header{padding:20px 18px 12px;display:grid;gap:10px;border-bottom:1px solid var(--line)}
+.kick{margin:0;font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--acc)}
+h1{margin:0;font:700 26px/1.05 var(--disp);text-wrap:balance}
+#q{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips button{display:flex;align-items:center;gap:5px;padding:3px 8px;border:1px solid var(--line);border-radius:99px;background:none;font-size:12px;color:var(--mute)}
+.chips button.on{border-color:var(--ink);color:var(--ink)}
+.chips i,#list i{width:7px;height:7px;border-radius:50%;flex:none}
+#list{list-style:none;margin:0;padding:6px;overflow:auto;flex:1;min-height:0}
+#list button{display:flex;align-items:center;gap:9px;width:100%;padding:6px 10px;border:0;border-radius:6px;background:none;text-align:left}
+#list button:hover{background:#ffffff0d}
+#list li.on button{background:var(--ink);color:#15131a}
+#list b{font:600 11px var(--mono);color:var(--mute);font-variant-numeric:tabular-nums}
+#list li.on b{color:#15131a}
+.main{min-width:0;overflow:auto;padding:18px 22px 40px;display:grid;gap:14px;align-content:start}
+.bar{display:flex;gap:14px;align-items:flex-start}
+.bar .ttl{flex:1;min-width:0}
+.bar .meta{display:flex;gap:10px;font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-variant-numeric:tabular-nums}
+.bar .meta #fam{color:var(--acc2)}
+h2{margin:4px 0 2px;font:700 30px/1.1 var(--disp);text-wrap:balance}
+#desc{margin:0;color:var(--mute);max-width:65ch}
+.nav{display:flex;gap:6px;flex:none}
+.nav button{padding:7px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-size:13px;white-space:nowrap}
+.nav button:hover{border-color:var(--ink)}
+.stage{position:relative;border:1px solid var(--line);border-radius:10px;background:#100e14;overflow:hidden;min-height:300px;display:grid;align-items:center}
+.code{border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.code summary{padding:10px 14px;cursor:pointer;font-weight:600}
+.code .in{position:relative;border-top:1px solid var(--line)}
+.code pre{margin:0;padding:14px;max-height:420px;overflow:auto;font:400 12px/1.55 var(--mono);white-space:pre-wrap;word-break:break-word;color:#d9d2e6}
+#copy{position:absolute;top:8px;right:14px;padding:4px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font-size:12px}
+.ar{position:absolute;top:50%;z-index:5;width:42px;height:42px;margin-top:-21px;border:1px solid #ffffff40;border-radius:50%;background:#15131acc;color:var(--ink);font-size:17px;line-height:1;display:grid;place-items:center;padding:0}
+.ar:hover{background:var(--acc);border-color:var(--acc);color:#15131a}
+.ar-p{left:8px}.ar-n{right:8px}
+@media(max-width:860px){html,body{height:auto}.app{display:block;height:auto}.side{border-right:0;border-bottom:1px solid var(--line)}#list{max-height:190px}.main{padding:14px 16px 32px}.bar{flex-wrap:wrap}h2{font-size:24px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+.stage{display:grid;place-items:center}
+.gl{position:relative;width:min(100%,calc(74vh*20/13));aspect-ratio:20/13;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.gl canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
+.gl .hint{position:absolute;left:12px;bottom:10px;margin:0;padding:3px 8px;border-radius:4px;background:#15131acc;color:var(--mute);font-size:12px;pointer-events:none}
+.gl .ar-p{left:10px}.gl .ar-n{right:10px}
+.gl .err{position:absolute;inset:0;display:grid;place-items:center;padding:20px;text-align:center;color:var(--mute)}
+
+</style><style>
+html.solo .side,html.solo .nav,html.solo #num{display:none!important}html.solo .app{grid-template-columns:minmax(0,1fr)}
+html.solo .main{max-width:1200px;width:100%;margin:auto}
+html.embed body{background:#100e14}html.embed .bar,html.embed .code,html.embed .hint{display:none!important}
+html.embed,html.embed body{height:auto}html.embed .app{display:block;height:auto}html.embed .main{padding:0;overflow:visible}
+html.embed .stage{border:0;border-radius:0}html.embed .gl{width:100%}
+</style></head><body><script>document.documentElement.classList.add("solo")</script><script>(function(){var em=/[?&]embed\b/.test(location.search);if(!em)return;document.documentElement.classList.add('embed');
+function send(){var h=Math.ceil(document.documentElement.scrollHeight);parent.postMessage({pezzoH:h,id:location.pathname.split('/').pop()},'*')}
+addEventListener('load',function(){send();new ResizeObserver(send).observe(document.body);setTimeout(send,800);setTimeout(send,2500)});})();</script>
+<div class="app">
+<aside class="side"><header><p class="kick">Raccolta 07 · three.js</p><h1>100 gallerie three.js</h1>
+<input id="q" type="search" placeholder="Cerca tra i 100 pezzi" aria-label="Cerca tra i 100 pezzi"><div class="chips" id="chips"></div></header>
+<ol id="list"></ol></aside>
+<main class="main">
+<div class="bar"><div class="ttl"><div class="meta"><span id="num"></span><span id="fam"></span></div><h2 id="name"></h2><p id="desc"></p></div>
+<div class="nav"><button type="button" id="prev">← Pezzo precedente</button><button type="button" id="next">Pezzo successivo →</button></div></div>
+<div class="stage" id="stage"></div>
+<details class="code"><summary>Codice di questo pezzo</summary><div class="in"><button type="button" id="copy">Copia</button><pre id="code"></pre></div></details>
+</main></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+const $q=(s,r=document)=>r.querySelector(s),pad=(n,l=2)=>String(n).padStart(l,'0');
+function rng(s){return()=>(s=(Math.imul(s,1664525)+1013904223)>>>0)/4294967296}
+const PAL=[['#ff8a5b','#3d1e6d','#ffd166','#1b1035'],['#0b3954','#bfd7ea','#ff6663','#e0ff4f'],['#f6bd60','#f28482','#84a59d','#3d405b'],['#22223b','#4a4e69','#f2e9e4','#c9ada7'],['#003049','#d62828','#f77f00','#fcbf49'],['#2d6a4f','#d8f3dc','#ffb703','#081c15'],['#264653','#2a9d8f','#e9c46a','#e76f51'],['#5f0f40','#fb8b24','#e36414','#0f4c5c'],['#f72585','#3a0ca3','#4cc9f0','#ffffff'],['#fefae0','#606c38','#bc6c25','#283618'],['#10002b','#7b2cbf','#e0aaff','#ff9e00'],['#edf6f9','#006d77','#e29578','#83c5be']];
+const TIT=['Dune al tramonto','Cerchi d\'acqua','Righe di sole','Isolati','Archi','Vele','Colline blu','Bolle','Tende','Quartiere','Onde radio','Cime'];
+// Immagini di prova disegnate su canvas: sostituiscile con le tue foto
+function makeImage(i,w=800,h=520,nl){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),P=PAL[i%12],R=rng(i*97+13),s=i%6;
+const g=x.createLinearGradient(0,0,w*R(),h);g.addColorStop(0,P[0]);g.addColorStop(1,P[1]);x.fillStyle=g;x.fillRect(0,0,w,h);
+if(s==0){for(let k=0;k<5;k++){x.fillStyle=k%2?P[2]:P[3];x.globalAlpha=.3+k*.14;x.beginPath();x.moveTo(0,h);for(let X=0;X<=w;X+=20)x.lineTo(X,h*(.42+k*.11)+Math.sin(X*.006*(k+1)+i+k)*h*.07);x.lineTo(w,h);x.fill()}x.globalAlpha=1;x.fillStyle=P[2];x.beginPath();x.arc(w*.72,h*.26,h*.11,0,7);x.fill()}
+if(s==1)for(let k=0;k<16;k++){x.globalAlpha=.25+R()*.5;x.fillStyle=P[2+k%2];x.beginPath();x.arc(R()*w,R()*h,20+R()*h*.28,0,7);x.fill()}
+if(s==2){x.translate(w/2,h/2);x.rotate(-.5+R());for(let k=-12;k<12;k++){x.globalAlpha=.35+R()*.5;x.fillStyle=P[2+((k+12)%2)];x.fillRect(k*70,-w,20+R()*40,w*2)}x.setTransform(1,0,0,1,0,0)}
+if(s==3)for(let k=0;k<14;k++){const bw=w/14,bh=h*(.2+R()*.6);x.globalAlpha=.85;x.fillStyle=k%3?P[3]:P[2];x.fillRect(k*bw+3,h-bh,bw-6,bh);x.fillStyle=P[0];x.globalAlpha=.5;for(let y=h-bh+12;y<h-10;y+=24)x.fillRect(k*bw+12,y,bw-24,8)}
+if(s==4)for(let k=9;k>0;k--){x.globalAlpha=.9;x.fillStyle=k%2?P[2]:P[3];x.beginPath();x.arc(w*(.15+R()*.1),h,k*h*.13,0,7);x.fill()}
+if(s==5)for(let k=0;k<12;k++){x.globalAlpha=.35+R()*.5;x.fillStyle=P[2+k%2];const X=R()*w,Y=R()*h,S=60+R()*220;x.beginPath();x.moveTo(X,Y-S);x.lineTo(X+S*.7,Y+S*.6);x.lineTo(X-S*.7,Y+S*.6);x.fill()}
+x.globalAlpha=1;if(nl)return c;x.font='600 '+Math.round(h*.045)+'px monospace';const t='N. '+pad(i+1)+'  '+TIT[i%12],tw=x.measureText(t).width;x.fillStyle='rgba(10,8,14,.55)';x.fillRect(h*.05,h*.86,tw+h*.06,h*.085);x.fillStyle='#fff';x.fillText(t,h*.08,h*.918);return c}
+const CAN=Array.from({length:12},(_,i)=>makeImage(i));
+function Catalog(demos,fams,show,hide){const list=$q('#list'),chips=$q('#chips');let cur=-1,fam=-1;
+demos.forEach((d,i)=>{const li=document.createElement('li');li.innerHTML=`<button type="button" data-i="${i}"><i style="background:${fams[d.f][1]}"></i><b>${pad(i+1,3)}</b><span>${d.n}</span></button>`;list.append(li);d.li=li});
+chips.innerHTML='<button type="button" data-f="-1" class="on">Tutti</button>'+fams.map((f,i)=>`<button type="button" data-f="${i}"><i style="background:${f[1]}"></i>${f[0]}</button>`).join('');
+const filt=()=>{const s=$q('#q').value.trim().toLowerCase();demos.forEach(d=>d.li.hidden=!((fam<0||d.f==fam)&&(!s||(d.n+' '+d.d).toLowerCase().includes(s))))};
+chips.onclick=e=>{const b=e.target.closest('button');if(!b)return;fam=+b.dataset.f;chips.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x==b));filt()};
+$q('#q').oninput=filt;list.onclick=e=>{const b=e.target.closest('button');if(b)go(+b.dataset.i)};
+function go(i){i=(i+demos.length)%demos.length;if(i==cur)return;if(cur>=0){try{hide(demos[cur])}catch(e){console.error(e)}demos[cur].li.classList.remove('on')}const first=cur<0;cur=i;const d=demos[i];d.li.classList.add('on');
+if(!first&&list.scrollHeight>list.clientHeight){const a=d.li.offsetTop-list.offsetTop;if(a<list.scrollTop||a>list.scrollTop+list.clientHeight-40)list.scrollTop=a-80}
+$q('#num').textContent=pad(i+1,3)+' / '+demos.length;$q('#fam').textContent=fams[d.f][0];$q('#name').textContent=d.n;$q('#desc').textContent=d.d;
+let code='';try{code=show(d,$q('#stage'))||''}catch(e){console.error('pezzo '+(i+1)+': '+e.message,e);code='Errore: '+e.message}$q('#code').textContent=code;
+try{location.hash='p'+pad(i+1,3)}catch(e){}}
+$q('#prev').onclick=()=>go(cur-1);$q('#next').onclick=()=>go(cur+1);
+$q('#copy').onclick=()=>{const b=$q('#copy');try{navigator.clipboard.writeText($q('#code').textContent).then(()=>{b.textContent='Copiato';setTimeout(()=>b.textContent='Copia',1200)},()=>{b.textContent='Seleziona e copia a mano'})}catch(e){b.textContent='Seleziona e copia a mano'}};
+const h=()=>{const m=/^#p(\d+)$/.exec(location.hash);return m?Math.min(demos.length,Math.max(1,+m[1]))-1:0};
+addEventListener('hashchange',()=>go(h()));go(h());window.__go=go}
+
+</script>
+<script>
+const T=THREE,W=1.6,H=1.04,N=12,S=Math.sin,C=Math.cos,ab=Math.abs,sg=Math.sign,mn=Math.min,mx=Math.max,PI=Math.PI;
+const FAM=[['Transizioni shader','#ff6b4a'],['Giostre e pile','#4cc9f0'],['Curve e figure','#b892ff'],['Deformazioni','#6fd08c'],['Particelle','#ffc145'],['Tessere','#ff8fab']];
+const DEMOS=[];let renderer,scene,camera,tex,cur=null,cv,idle=0,auto=0;const ptr={x:0,y:0};
+const NOISE='float h21(vec2 q){return fract(sin(dot(q,vec2(127.1,311.7)))*43758.5453);}float ns(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);return mix(mix(h21(i),h21(i+vec2(1.,0.)),f.x),mix(h21(i+vec2(0.,1.)),h21(i+1.),f.x),f.y);}';
+const FH='uniform sampler2D tA,tB;uniform float p,t;varying vec2 vUv;vec4 A(vec2 u){return texture2D(tA,u);}vec4 B(vec2 u){return texture2D(tB,u);}'+NOISE;
+
+// ---- motori ----
+// stato comune: indice corrente, avanzamento p da 0 a 1, texture A (corrente) e B (in arrivo)
+function slider(u,dur){let i=0,p=0,dir=0;return{go(d){if(dir)return;dir=d;u.tB.value=tex[(i+d+N)%N]},step(t,dt){u.t.value=t;if(dir){p+=dt/dur;if(p>=1){i=(i+dir+N)%N;u.tA.value=tex[i];u.tB.value=tex[(i+1)%N];p=0;dir=0}}u.p.value=p*p*(3-2*p)}}}
+// 1. piano a tutto schermo con shader di transizione: fx(u) restituisce il colore del pixel
+function eShader(glsl){camera.position.z=H/2/Math.tan(PI/9);const u={tA:{value:tex[0]},tB:{value:tex[1]},p:{value:0},t:{value:0}};
+scene.add(new T.Mesh(new T.PlaneGeometry(W,H),new T.ShaderMaterial({uniforms:u,vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:FH+'vec4 fx(vec2 u){'+glsl+'}void main(){gl_FragColor=fx(vUv);}'})));
+const s=slider(u,1.5);return{go:s.go,update:s.step}}
+// 2. dodici piani disposti da una funzione: d = distanza dal piano a fuoco, a = angolo sul giro, k = 1 se a fuoco
+function eLayout(fn){const g=new T.PlaneGeometry(W,H),ms=tex.map(x=>{const m=new T.Mesh(g,new T.MeshBasicMaterial({map:x,side:T.DoubleSide}));scene.add(m);return m});let f=0,tg=0;
+return{par:1,go(d){tg+=d},update(t,dt){f+=(tg-f)*mn(1,dt*5);ms.forEach((o,i)=>{const dd=((i-f)%N+N)%N,d=dd>N/2?dd-N:dd;o.position.set(0,0,0);o.rotation.set(0,0,0);o.scale.setScalar(1);o.visible=true;fn(o,o.position,o.rotation,d,d/N*PI*2,i,N,t,mx(0,1-ab(d)),dd)})}}}
+// 3. piano suddiviso deformato nel vertex shader: k = sin(p·π) vale 0 a riposo e 1 a metà cambio
+function eVertex(glsl){camera.position.z=3.4;const u={tA:{value:tex[0]},tB:{value:tex[1]},p:{value:0},t:{value:0}};
+scene.add(new T.Mesh(new T.PlaneGeometry(W,H,96,62),new T.ShaderMaterial({uniforms:u,side:T.DoubleSide,vertexShader:'uniform float p,t;varying vec2 vUv;varying float vS;'+NOISE+'vec3 df(vec3 pos,vec2 u,float k){'+glsl+'return pos;}void main(){vUv=uv;vec3 q=df(position,uv,sin(p*3.14159));vS=q.z;gl_Position=projectionMatrix*modelViewMatrix*vec4(q,1.);}',fragmentShader:FH+'varying float vS;void main(){vec4 c=mix(A(vUv),B(vUv),smoothstep(.35,.65,p));gl_FragColor=vec4(c.rgb*(1.+clamp(vS,-1.,1.)*.3),1.);}'})));
+const s=slider(u,1.9);return{par:1,go:s.go,update:s.step}}
+// 4. immagine fatta di 26.000 punti: dp() sposta ogni punto, r = numero casuale del punto
+function ePoints(glsl){camera.position.z=3.4;const nx=200,ny=130,P=new Float32Array(nx*ny*3),U=new Float32Array(nx*ny*2),R=new Float32Array(nx*ny);let k=0;
+for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){P[k*3]=(x/(nx-1)-.5)*W;P[k*3+1]=(y/(ny-1)-.5)*H;U[k*2]=x/(nx-1);U[k*2+1]=y/(ny-1);R[k++]=Math.random()}
+const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(P,3));g.setAttribute('uv',new T.BufferAttribute(U,2));g.setAttribute('rnd',new T.BufferAttribute(R,1));
+const u={tA:{value:tex[0]},tB:{value:tex[1]},p:{value:0},t:{value:0},sz:{value:8}};
+const m=new T.Points(g,new T.ShaderMaterial({uniforms:u,vertexShader:'uniform float p,t,sz;uniform sampler2D tA;attribute float rnd;varying vec2 vUv;'+NOISE+'vec3 dp(vec3 pos,vec2 u,float k,float r){'+glsl+'return pos;}void main(){vUv=uv;vec4 mv=modelViewMatrix*vec4(dp(position,uv,sin(p*3.14159),rnd),1.);gl_PointSize=sz/-mv.z;gl_Position=projectionMatrix*mv;}',fragmentShader:FH+'void main(){gl_FragColor=mix(A(vUv),B(vUv),smoothstep(.3,.7,p));}'}));m.frustumCulled=false;scene.add(m);
+const s=slider(u,2.4);return{par:1,go:s.go,update(t,dt){u.sz.value=cv.height*.0165;s.step(t,dt)}}}
+// 5. immagine tagliata in tessere: ogni tessera ha un ritardo e un movimento; a metà corsa cambia foto
+function eTiles(cx,cy,def){camera.position.z=3.4;const ts=[];
+for(let y=0;y<cy;y++)for(let x=0;x<cx;x++){const g=new T.PlaneGeometry(W/cx,H/cy),uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,(x+uv.getX(i))/cx,(y+uv.getY(i))/cy);const m=new T.Mesh(g,new T.MeshBasicMaterial({map:tex[0],side:T.DoubleSide}));m.userData={x:x/(cx-1||1),y:y/(cy-1||1),bx:(x+.5)/cx*W-W/2,by:(y+.5)/cy*H-H/2,r:Math.random(),r2:Math.random()};scene.add(m);ts.push(m)}
+let i=0,p=0,dir=0,nx=1;return{par:1,go(d){if(dir)return;dir=d;nx=(i+d+N)%N},update(t,dt){if(dir){p+=dt/2.2;if(p>=1){i=nx;p=0;dir=0}}
+ts.forEach(o=>{const d=o.userData,q=mn(1,mx(0,p*1.6-def.delay(d)*.6)),e=q*q*(3-2*q);o.position.set(d.bx,d.by,0);o.rotation.set(0,0,0);o.material.map=dir&&e>=.5?tex[nx]:tex[i];def.move(o,e,S(PI*e),PI*(e<.5?e:e-1),d)})}}}
+
+const add=(f,n,d,kind,src,make)=>DEMOS.push({f,n,d,kind,src,make});
+const ST=(n,d,g)=>add(0,n,d,'eShader','vec4 fx(vec2 u){\n'+g.replace(/;/g,';\n')+'}',()=>eShader(g));
+const LY=(f,n,d,fn)=>add(f,n,d,'eLayout',fn.toString(),()=>eLayout(fn));
+const VX=(n,d,g)=>add(3,n,d,'eVertex','vec3 df(vec3 pos,vec2 u,float k){\n'+g.replace(/;/g,';\n')+'return pos;\n}',()=>eVertex(g));
+const PT=(n,d,g)=>add(4,n,d,'ePoints','vec3 dp(vec3 pos,vec2 u,float k,float r){\n'+g.replace(/;/g,';\n')+'return pos;\n}',()=>ePoints(g));
+const TL=(n,d,cx,cy,def)=>add(5,n,d,'eTiles','// griglia '+cx+' × '+cy+'\ndelay: '+def.delay.toString()+'\nmove: '+def.move.toString(),()=>eTiles(cx,cy,def));
+
+// ---- 20 transizioni shader ----
+ST('Onda liquida','Le due foto si deformano su un rumore morbido mentre si scambiano.','vec2 d=vec2(ns(u*4.+t*.2),ns(u*4.+7.))-.5;return mix(A(u+d*p*.6),B(u-d*(1.-p)*.6),p);');
+ST('Tendina morbida','Un bordo sfumato attraversa l\'immagine da sinistra.','float e=smoothstep(p*1.2-.2,p*1.2,u.x);return mix(B(u),A(u),e);');
+ST('Dissolvenza a grana','La nuova foto affiora a granelli.','float n=ns(u*40.);return mix(A(u),B(u),smoothstep(n-.1,n+.1,p*1.2-.1));');
+ST('Pixel crescenti','L\'immagine si sgrana in blocchi grandi e poi torna nitida.','float k=sin(p*3.1416);float c=mix(400.,14.,k);vec2 q=(floor(u*c)+.5)/c;return mix(A(q),B(q),p);');
+ST('Onde concentriche','Cerchi d\'acqua partono dal centro durante il cambio.','vec2 d=u-.5;float l=length(d);vec2 o=d/(l+1e-4)*sin(l*40.-t*6.)*.03*sin(p*3.1416);return mix(A(u+o),B(u+o),p);');
+ST('Vortice','Il centro si avvita e si riapre sulla foto nuova.','vec2 d=u-.5;float l=length(d);float a=(1.-smoothstep(0.,.7,l))*sin(p*3.1416)*6.;float c=cos(a),s=sin(a);vec2 q=mat2(c,-s,s,c)*d+.5;return mix(A(q),B(q),p);');
+ST('Scorrimento RGB','I tre canali si separano in orizzontale.','float k=sin(p*3.1416)*.08;vec4 a=vec4(A(u+vec2(k,0.)).r,A(u).g,A(u-vec2(k,0.)).b,1.);vec4 b=vec4(B(u+vec2(k,0.)).r,B(u).g,B(u-vec2(k,0.)).b,1.);return mix(a,b,p);');
+ST('Veneziane','Dodici lamelle verticali si aprono.','float f=fract(u.x*12.);return mix(A(u),B(u),smoothstep(p-.02,p+.02,f*.96+.02)<.5?1.:0.);');
+ST('Scacchiera a tempo','I riquadri si aprono in diagonale, uno dopo l\'altro.','vec2 c=floor(u*vec2(8.,5.));vec2 f=fract(u*vec2(8.,5.))-.5;float q=clamp(p*2.-(c.x+c.y)/13.,0.,1.);return max(abs(f.x),abs(f.y))<q*.5?B(u):A(u);');
+ST('Orologio','Una lancetta spazza il quadrante e lascia la foto nuova.','float a=atan(u.y-.5,u.x-.5)/6.2832+.5;return mix(A(u),B(u),smoothstep(a-.02,a+.02,p*1.04-.02));');
+ST('Iride','Un cerchio si allarga dal centro.','float l=length((u-.5)*vec2(1.54,1.));return mix(A(u),B(u),1.-smoothstep(p*.95-.02,p*.95,l));');
+ST('Zoom incrociato','La foto vecchia viene incontro, la nuova arriva da lontano.','vec2 d=u-.5;return mix(A(.5+d*(1.-p*.6)),B(.5+d*(.4+p*.6)),smoothstep(.3,.7,p));');
+ST('Spinta','La foto nuova spinge fuori la vecchia.','return u.x<1.-p?A(u+vec2(p,0.)):B(u-vec2(1.-p,0.));');
+ST('Porte scorrevoli','La foto si apre in due ante.','float s=p*.5;if(abs(u.x-.5)<s)return B(u);return A(u+vec2(u.x<.5?s:-s,0.));');
+ST('Glitch a bande','Bande orizzontali scattano di lato come un segnale disturbato.','float b=floor(u.y*24.);float o=(h21(vec2(b,floor(t*12.)))-.5)*sin(p*3.1416)*.4;return mix(A(u+vec2(o,0.)),B(u+vec2(o,0.)),step(.5,p));');
+ST('Stiramento elastico','L\'immagine si tira in orizzontale come un elastico.','float k=sin(p*3.1416);vec2 q=vec2(.5+(u.x-.5)*(1.-k*.85),u.y);return mix(A(q),B(q),p);');
+ST('Caleidoscopio di passaggio','Per un attimo la foto si specchia in sei spicchi.','vec2 d=u-.5;float a=atan(d.y,d.x),l=length(d);float k=sin(p*3.1416);float s=6.2832/6.;float a2=mix(a,abs(mod(a,s)-s*.5),k);vec2 q=.5+l*vec2(cos(a2),sin(a2));return mix(A(q),B(q),p);');
+ST('Bruciatura','Un bordo incandescente consuma la foto.','float n=ns(u*6.)*.8+ns(u*20.)*.2;float e=p*1.3-.15;vec4 c=mix(A(u),B(u),smoothstep(n-.02,n+.02,e));float g=smoothstep(.08,0.,abs(n-e));return c+vec4(1.,.45,.1,0.)*g*sin(p*3.1416);');
+ST('Bordo ondulato','La tendina avanza con un profilo a onda.','float e=p*1.4-.2+sin(u.y*12.+t*3.)*.04;return mix(A(u),B(u),smoothstep(e+.01,e-.01,u.x));');
+ST('Righe alternate','Dieci righe escono, una a destra e una a sinistra.','float r=floor(u.y*10.);float s=mod(r,2.)<1.?1.:-1.;vec2 q=u+vec2(s*p,0.);return (q.x<0.||q.x>1.)?B(u):A(q);');
+
+// ---- 25 giostre e pile ----
+LY(1,'Giostra ad anello','Dodici foto in cerchio attorno a un asse verticale.',(o,p,r,d,a)=>{p.set(S(a)*3,0,C(a)*3-3);r.y=a});
+LY(1,'Cilindro dall\'interno','Sei al centro del cilindro e le foto ti girano attorno.',(o,p,r,d,a)=>{p.set(S(a)*3.6,0,6-C(a)*3.6);r.y=-a});
+LY(1,'Elica','Le foto salgono a spirale.',(o,p,r,d,a)=>{p.set(S(a*2)*2.4,d*.5,C(a*2)*2.4-2.4);r.y=a*2});
+LY(1,'Coverflow','Copertina frontale al centro, le altre di taglio ai lati.',(o,p,r,d)=>{const c=mx(-1,mn(1,d));p.set(d*.75+c*1.1,0,-ab(c)*1.3);r.y=-c*1.15});
+LY(1,'Mazzo di carte','La carta in cima vola via a sinistra.',(o,p,r,d)=>{p.set(d<0?d*5:d*.12,d<0?0:d*.07,-ab(d)*.25);r.z=d<0?d*.4:-d*.05});
+LY(1,'Ventaglio','Le foto ruotano attorno a un perno in basso.',(o,p,r,d)=>{r.z=-d*.24;p.set(S(d*.24)*3.4,C(d*.24)*3.4-3.4,-ab(d)*.02)});
+LY(1,'Fila a onda','Una fila che ondeggia su e giù.',(o,p,r,d,a,i,n,t)=>{p.set(d*1.8,S(d*.9+t*1.5)*.35,-ab(d)*.3)});
+LY(1,'Parete con primo piano','Griglia 4 × 3: la foto scelta esce dalla parete.',(o,p,r,d,a,i,n,t,k)=>{p.set((i%4-1.5)*1.7*(1-k),(1-Math.floor(i/4))*1.15*(1-k),k*2.4-1.5)});
+LY(1,'Tunnel','Le foto arrivano dal fondo e ti passano accanto.',(o,p,r,d,a,i,n,t,k,dd)=>{const c=mn(1,dd);p.set(C(i*2.4)*1.7*c,S(i*2.4)*1.1*c,2.5-dd*2.2)});
+LY(1,'Spirale piatta','Una chiocciola che si svolge verso il centro.',(o,p,r,d,a,i,n,t,k,dd)=>{const g=dd*.9;p.set(S(g)*dd*.42,C(g)*dd*.42,1.5-dd*.5);o.scale.setScalar(mx(.25,1.1-dd*.07))});
+LY(1,'Arco','Le foto seguono un arco di cerchio.',(o,p,r,d)=>{p.set(S(d*.45)*4,C(d*.45)*4-4,0);r.z=-d*.45});
+LY(1,'Scalinata','Gradini che scendono da sinistra a destra.',(o,p,r,d)=>{p.set(d*1.25,-d*.6,-ab(d)*.8)});
+LY(1,'Ruota panoramica','L\'anello gira in verticale.',(o,p,r,d,a)=>{p.set(0,S(a)*2.8,C(a)*2.8-2.8);r.x=-a});
+LY(1,'Domino','Le foto già viste cadono all\'indietro.',(o,p,r,d)=>{const c=mx(0,mn(1,-d));p.set(d*.85,-c*.4,-ab(d)*.1);r.y=.5;r.x=-c*1.4});
+LY(1,'Zig zag','Foto piegate a paravento.',(o,p,r,d,a,i)=>{p.set(d*1.45,0,-ab(d)*.25);r.y=(i%2?1:-1)*.75*mn(1,ab(d))});
+LY(1,'Fiore','Petali attorno al centro: quello scelto viene avanti.',(o,p,r,d,a,i,n,t,k)=>{p.set(S(a)*2.2*(1-k),C(a)*1.5*(1-k),k*2-1);r.z=-a*(1-k);o.scale.setScalar(.55+k*.6)});
+LY(1,'Vortice','Le foto ruotano mentre sprofondano.',(o,p,r,d,a,i,n,t,k,dd)=>{const g=dd*.7+t*.3;p.set(C(g)*dd*.33,S(g)*dd*.33,2.2-dd*1.1);r.z=g*mn(1,dd)});
+LY(1,'Due anelli opposti','Due giostre sovrapposte che girano in versi contrari.',(o,p,r,d,a,i)=>{const s=i%2?1:-1,b=a*s;p.set(S(b)*3,s*.62,C(b)*3-3);r.y=b;o.scale.setScalar(.85)});
+LY(1,'Libreria','Dorsi affiancati: il volume scelto si gira di fronte.',(o,p,r,d,a,i,n,t,k)=>{const c=mn(1,ab(d));p.set(d*.3+sg(d)*c*.95,0,k*.8);r.y=-sg(d)*c*1.35});
+LY(1,'Pendoli','Quadri appesi che dondolano.',(o,p,r,d,a,i,n,t)=>{p.set(d*1.75,-.1,-ab(d)*.2);r.z=S(t*2+i)*.22});
+LY(1,'Fisarmonica','Le foto laterali si chiudono a soffietto.',(o,p,r,d,a,i)=>{const c=mn(1,ab(d));p.set(d*.55+sg(d)*c*.85,0,-c*.3);r.y=(i%2?1:-1)*1.1*c});
+LY(1,'Prisma quadrato','Quattro facce di un parallelepipedo che ruota.',(o,p,r,d)=>{o.visible=d>-1.6&&d<2.6;const g=d*PI/2;p.set(S(g)*.8,0,C(g)*.8+.2);r.y=g});
+LY(1,'Prisma triangolare','Tre facce, come un cartellone rotante.',(o,p,r,d)=>{o.visible=d>-1.1&&d<2.1;const g=d*PI*2/3;p.set(S(g)*.462,0,C(g)*.462+1.04);r.y=g});
+LY(1,'Rullo','Un tamburo a otto facce che gira in verticale.',(o,p,r,d)=>{o.visible=ab(d)<4.5;const g=d*PI/4,R=1.2553;p.set(0,-S(g)*R,C(g)*R-R+1);r.x=g});
+LY(1,'Mano di carte','Carte tenute a ventaglio: quella scelta si alza.',(o,p,r,d,a,i,n,t,k)=>{r.z=-d*.14;p.set(d*.6,-d*d*.045+k*.45-.2,-ab(d)*.02+k*.3)});
+
+// ---- 25 curve e figure ----
+LY(2,'Galassia','Foto sparse su una spirale lenta; quella scelta viene al centro.',(o,p,r,d,a,i,n,t,k)=>{const g=i*2.4+t*.1,q=.9+i*.27;p.set(C(g)*q*(1-k),S(g)*q*.5*(1-k),-3*(1-k)+2*k);o.scale.setScalar(.55+k*.65);r.z=(1-k)*S(i)*.4});
+LY(2,'Doppia elica','Due filamenti intrecciati.',(o,p,r,d,a,i)=>{const g=d*.6+PI/2+(i%2?PI:0);p.set(C(g)*1.5,d*.42,S(g)*1.5-1);r.y=PI/2-g});
+LY(2,'Nodo','L\'anello ondeggia come un nodo a trifoglio.',(o,p,r,d,a)=>{const q=2.6+C(a*3)*.6;p.set(S(a)*q,S(a*3)*.6,C(a)*q-3.2);r.y=a});
+LY(2,'Cono','Le foto scendono lungo un cono.',(o,p,r,d)=>{const g=d*1.1,q=ab(d)*.55;p.set(S(g)*q,.6-ab(d)*.45,C(g)*q-q);r.y=g;o.scale.setScalar(mx(.4,1-ab(d)*.08))});
+LY(2,'Strada in prospettiva','Foto sdraiate ai lati di una strada; la prossima si alza.',(o,p,r,d,a,i,n,t,k,dd)=>{const c=mn(1,dd);p.set((i%2?1:-1)*1.3*c,-1.3*c,2.5-dd*1.9);r.x=-1.25*c});
+LY(2,'Quadrante','Dodici foto come le ore di un orologio.',(o,p,r,d,a,i,n,t,k)=>{const g=d*PI/6;p.set(S(g)*2.9*(1-k),C(g)*1.75*(1-k),k);o.scale.setScalar(.42+k*.9)});
+LY(2,'Lissajous','Le foto percorrono una curva intrecciata.',(o,p,r,d,a,i,n,t)=>{const g=a+t*.2;p.set(S(g*2)*2.7,S(g*3)*1.4,C(g)*1.5-1.5);o.scale.setScalar(.6)});
+LY(2,'Otto','Percorso a forma di otto.',(o,p,r,d,a)=>{p.set(S(a)*3,S(a*2)*1,C(a)*1.6-1.6);r.y=S(a)*.6});
+LY(2,'Cuore','Le foto disegnano un cuore.',(o,p,r,d,a,i,n,t,k)=>{const g=a+PI,x=16*S(g)**3,y=13*C(g)-5*C(2*g)-2*C(3*g)-C(4*g);p.set(x*.15*(1-k),(y*.13+.3)*(1-k),-1+k*2.2);o.scale.setScalar(.45+k*.8)});
+LY(2,'Stella','Punte e rientranze alternate.',(o,p,r,d,a,i,n,t,k)=>{const q=i%2?1.3:2.4;p.set(S(a)*q*1.2*(1-k),C(a)*q*.8*(1-k),-1+k*2.2);o.scale.setScalar(.45+k*.8);r.z=-a*(1-k)});
+LY(2,'Parete a onda','Una parete che si gonfia attorno alla foto scelta.',(o,p,r,d,a,i,n,t)=>{p.set((i%4-1.5)*1.68,(1-Math.floor(i/4))*1.1,-1.6+C(mn(PI,ab(d)*.7))*1.1+S(t*1.5+i)*.08)});
+LY(2,'Tessere inquiete','Le foto oscillano sul posto finché non vengono scelte.',(o,p,r,d,a,i,n,t,k)=>{p.set((i%4-1.5)*1.7*(1-k),(1-Math.floor(i/4))*1.15*(1-k),-1.5+k*2.6);r.y=S(t+i*1.7)*.6*(1-k);r.x=C(t*.8+i)*.4*(1-k)});
+LY(2,'Cascata','Le foto scendono dall\'alto, sparse.',(o,p,r,d,a,i)=>{const c=mn(1,ab(d));p.set(S(i*1.7)*2.2*c,-d*1.25,-ab(d)*.6);r.z=S(i*3.1)*.25*c});
+LY(2,'Tabellone a ribalta','La foto vista si ribalta in avanti e scopre la successiva.',(o,p,r,d)=>{o.visible=ab(d)<1.6;const g=PI*mx(0,mn(1,-d))*.999;p.set(0,-.22+.52*C(g),.52*S(g)-(d>0?d*.01:0));r.x=g});
+LY(2,'Sfera','Foto appoggiate su una sfera che ruota.',(o,p,r,d,a,i,n,t,k)=>{const la=S(i*2.1)*.7*(1-k);p.set(S(a)*C(la)*2.6,S(la)*2.6,C(a)*C(la)*2.6-2.6);o.lookAt(p.x*2,p.y*2,(p.z+2.6)*2-2.6)});
+LY(2,'Orbite','Tre orbite a velocità diverse.',(o,p,r,d,a,i,n,t,k)=>{const b=i%3,g=a*(b+1)*.5+t*.15*(b+1),q=1.5+b*.8;p.set(C(g)*q*(1-k),(S(g)*q*.35+(b-1)*.3)*(1-k),(S(g)*q*.6-2)*(1-k)+k*2);o.scale.setScalar(.5+k*.7)});
+LY(2,'Diagonale','Una fila in diagonale che sfuma in profondità.',(o,p,r,d)=>{p.set(d*1.1,d*.7,-ab(d)*1.2);r.y=-.4});
+LY(2,'Pila in profondità','Una pila che si allontana; la prima cade verso il basso.',(o,p,r,d)=>{d<0?p.set(0,d*3.5,.5):p.set(0,d*.3,-d*.9)});
+LY(2,'Carosello inclinato','Un anello piegato, come un piatto che gira.',(o,p,r,d,a)=>{p.set(S(a)*3,(1-C(a))*.55,C(a)*3-3);r.y=a;r.z=S(a)*.2});
+LY(2,'Onda in profondità','La fila serpeggia avanti e indietro.',(o,p,r,d)=>{p.set(d*1.3,0,C(d*1.2)*1.2-1.2);r.y=S(d*1.2)*.8});
+LY(2,'Girandola','Le foto ruotano come pale attorno al centro.',(o,p,r,d,a,i,n,t,k)=>{const g=a+t*.2*(1-k);p.set(S(g)*1.5*(1-k),C(g)*1.5*(1-k),-1-ab(d)*.05+k*2.4);r.z=-g*(1-k);o.scale.setScalar(.75+k*.4)});
+LY(2,'Ponte','Le foto formano la schiena di un ponte.',(o,p,r,d)=>{p.set(d*1.3,-d*d*.12,-ab(d)*.5);r.z=-d*.12;r.x=-.2});
+LY(2,'Sipario','Le foto si aprono ai lati come quinte.',(o,p,r,d)=>{const c=mn(1,ab(d));p.set(sg(d)*c*2.3+d*.22,0,-ab(d)*.3);r.y=-sg(d)*c*1.3});
+LY(2,'Nastro di Möbius','L\'anello si torce di mezzo giro.',(o,p,r,d,a)=>{p.set(S(a)*2.8,0,C(a)*2.8-2.8);r.y=a;r.z=a*.5});
+LY(2,'Sciame','Le foto vagano libere; quella scelta si ferma davanti.',(o,p,r,d,a,i,n,t,k)=>{p.set(S(i*12.9+t*.3)*3*(1-k),C(i*7.3+t*.25)*1.6*(1-k),(-2+S(i*4.1+t*.2)*1.5)*(1-k)+k*1.6);r.z=S(i+t*.4)*.3*(1-k);o.scale.setScalar(.6+k*.5)});
+
+// ---- 15 deformazioni ----
+VX('Bandiera','La foto sventola sempre, più forte durante il cambio.','pos.z+=sin(pos.x*3.+t*3.)*.12*(.3+k);');
+VX('Rigonfiamento','Il centro si gonfia come una bolla.','pos.z+=k*1.2*exp(-dot(pos.xy,pos.xy)*1.5);');
+VX('Torsione','La foto si attorciglia lungo l\'asse orizzontale.','float an=pos.x*k*3.;float c=cos(an),s=sin(an);pos.yz=mat2(c,-s,s,c)*pos.yz;');
+VX('Arrotolamento','Il foglio si curva fino a diventare un cilindro.','float c=max(k*1.9,.001);float th=pos.x*c;pos.x=sin(th)/c;pos.z=(cos(th)-1.)/c;');
+VX('Increspatura','Onde circolari partono dal centro.','float l=length(pos.xy);pos.z+=sin(l*12.-t*8.)*.24*k/(1.+l*2.);');
+VX('Sportello','La foto gira attorno al bordo sinistro come un\'anta.','float an=k*1.4;pos.x+=.8;float x=pos.x;pos.x=x*cos(an)-.8;pos.z=-x*sin(an);');
+VX('Vento','Un rumore morbido scompiglia la superficie.','pos.z+=(ns(pos.xy*2.+t)-.5)*k*1.2;');
+VX('Piega a metà','Il foglio si chiude lungo la piega centrale.','pos.z=-abs(pos.x)*k*1.2;pos.x*=1.-k*.4;');
+VX('Sfera','Il piano si avvolge in una palla e si riapre.','float lo=(u.x-.5)*6.2832,la=(u.y-.5)*3.1416;pos=mix(pos,vec3(sin(lo)*cos(la),sin(la),cos(lo)*cos(la))*.75,k);');
+VX('Gelatina','La foto trema come gelatina.','pos.x+=sin(pos.y*4.+t*6.)*.15*k;pos.y+=sin(pos.x*4.+t*5.)*.1*k;');
+VX('Carta stropicciata','La superficie si accartoccia in pieghe secche.','pos.z+=(abs(ns(pos.xy*5.)-.5)*2.-.5)*k*.8;');
+VX('Tenda','Pieghe verticali che si raccolgono verso il basso.','float w=1.-u.y;pos.z+=sin(pos.x*14.)*.1*k*w;pos.x*=1.-k*.5*w;');
+VX('Lente','Il centro viene verso di te e si ingrandisce.','float l=length(pos.xy);pos.xy*=1.+k*.6*(1.-l);pos.z+=k*(1.-l*l)*.6;');
+VX('Soffietto','Pieghe a zig zag che si stringono.','pos.z+=abs(fract(pos.x*3.)-.5)*k;pos.x*=1.-k*.5;');
+VX('Scia','I bordi alto e basso restano indietro come in una curva veloce.','pos.x-=k*pos.y*pos.y*2.;');
+
+// ---- 8 particelle ----
+PT('Esplosione','I punti schizzano via e si ricompongono nella foto nuova.','pos+=normalize(vec3(pos.xy,r-.5)+1e-3)*k*r*4.;');
+PT('Polvere al vento','La foto si sbriciola verso destra.','pos.x+=k*r*5.;pos.y+=sin(r*40.+t*3.)*k*.6;');
+PT('Pioggia','I punti cadono come gocce.','pos.y-=k*r*3.;pos.z+=k*r*.5;');
+PT('Vortice di punti','I punti ruotano attorno al centro a velocità diverse.','float an=k*(2.+r*6.);float c=cos(an),s=sin(an);pos.xy=mat2(c,-s,s,c)*pos.xy;pos.z+=k*r*2.;');
+PT('Sfera di punti','I punti si raccolgono in una sfera.','float lo=(u.x-.5)*6.2832,la=(u.y-.5)*3.1416;pos=mix(pos,vec3(sin(lo)*cos(la),sin(la),cos(lo)*cos(la))*(.7+r*.1),k);');
+PT('Onda di punti','Una superficie di punti che ondeggia.','pos.z+=sin(pos.x*4.+t*3.)*.3*(.4+k)+r*k;');
+PT('Rilievo','I punti chiari si alzano: la foto diventa un plastico.','pos.z+=dot(texture2D(tA,u).rgb,vec3(.33))*(.35+k);');
+PT('Rumore','Ogni punto vaga per conto suo e poi rientra.','pos+=(vec3(ns(pos.xy*3.+t),ns(pos.yx*3.-t),ns(pos.xy*2.))-.5)*k*3.;');
+
+// ---- 7 tessere ----
+TL('Tessere a ribalta','96 tessere si girano da sinistra a destra.',12,8,{delay:d=>d.x,move:(o,e,k,fl)=>{o.rotation.y=fl}});
+TL('Onda diagonale','Il ribaltamento corre in diagonale.',12,8,{delay:d=>(d.x+d.y)/2,move:(o,e,k,fl)=>{o.rotation.x=fl}});
+TL('Esplosione di tessere','Le tessere saltano in aria ruotando.',12,8,{delay:d=>d.r,move:(o,e,k,fl,d)=>{o.position.z+=k*d.r*3;o.position.x+=k*(d.r2-.5)*2;o.rotation.y=fl;o.rotation.z=k*d.r*3}});
+TL('Scomposizione in profondità','Le tessere arretrano dal centro verso i bordi.',12,8,{delay:d=>Math.hypot(d.x-.5,d.y-.5)*1.4,move:(o,e,k,fl,d)=>{o.position.z=-k*d.r*4;o.rotation.y=fl}});
+TL('Lamelle verticali','Sedici strisce girano in sequenza.',16,1,{delay:d=>d.x,move:(o,e,k,fl)=>{o.rotation.y=fl}});
+TL('Lamelle orizzontali','Dieci fasce si ribaltano a cascata.',1,10,{delay:d=>1-d.y,move:(o,e,k,fl)=>{o.rotation.x=fl}});
+TL('Cubetti casuali','Quaranta riquadri girano in ordine sparso.',8,5,{delay:d=>d.r,move:(o,e,k,fl,d)=>{o.rotation.x=fl;o.position.z=k*.4;o.scale.setScalar(1-k*.3)}});
+
+// ---- palco ----
+const ENG={eShader,eLayout,eVertex,ePoints,eTiles};
+function clear(){scene.traverse(o=>{o.geometry&&o.geometry.dispose();o.material&&o.material.dispose()});scene.clear()}
+function show(d){if(!renderer)return'';clear();camera.position.set(0,0,6);camera.rotation.set(0,0,0);scene.rotation.set(0,0,0);idle=4;auto=2;cur=d.make();
+return '// '+d.n+' — three.js r160\n// A(u) e B(u): foto corrente e foto in arrivo · p: avanzamento 0→1 · t: secondi\n'+d.src+'\n\n// Motore usato da questo pezzo\n'+ENG[d.kind].toString()+(d.kind=='eLayout'||d.kind=='eTiles'?'':'\n\n'+slider.toString())}
+function hide(){cur=null}
+function boot(){const st=$q('#stage');st.innerHTML='<div class="gl"><canvas></canvas><button type="button" class="ar ar-p" aria-label="Foto precedente">←</button><button type="button" class="ar ar-n" aria-label="Foto successiva">→</button><p class="hint">Frecce, trascinamento o tasti ← →. Il cursore inclina la scena.</p></div>';
+cv=$q('canvas',st);try{renderer=new T.WebGLRenderer({canvas:cv,antialias:true})}catch(e){$q('.gl',st).insertAdjacentHTML('beforeend','<p class="err">Questo browser non ha WebGL attivo: le gallerie non possono essere disegnate.</p>');return}
+renderer.setPixelRatio(mn(devicePixelRatio||1,2));renderer.outputColorSpace=T.LinearSRGBColorSpace;renderer.setClearColor(0x100e14);
+scene=new T.Scene();camera=new T.PerspectiveCamera(40,20/13,.1,100);tex=CAN.map(c=>{const x=new T.CanvasTexture(c);x.anisotropy=4;return x});
+const fit=()=>{const r=cv.parentNode.getBoundingClientRect();if(r.width)renderer.setSize(r.width,r.height,false)};new ResizeObserver(fit).observe(cv.parentNode);fit();
+const go=d=>{idle=0;cur&&cur.go(d)};$q('.ar-p',st).onclick=()=>go(-1);$q('.ar-n',st).onclick=()=>go(1);window.__next=()=>go(1);
+addEventListener('keydown',e=>{if(e.target.tagName=='INPUT')return;if(e.key=='ArrowRight')go(1);if(e.key=='ArrowLeft')go(-1)});
+let dx=null;cv.onpointerdown=e=>{dx=e.clientX};addEventListener('pointerup',e=>{if(dx!=null){const d=e.clientX-dx;if(ab(d)>30)go(d<0?1:-1)}dx=null});
+cv.onpointermove=e=>{const r=cv.getBoundingClientRect();ptr.x=(e.clientX-r.left)/r.width*2-1;ptr.y=-((e.clientY-r.top)/r.height*2-1)};cv.onpointerleave=()=>{ptr.x=ptr.y=0};
+const still=matchMedia('(prefers-reduced-motion:reduce)').matches;let last=performance.now();const t0=last;
+(function loop(now){requestAnimationFrame(loop);const dt=mn(.05,(now-last)/1000);last=now;if(!cur)return;idle+=dt;auto+=dt;if(!still&&idle>4&&auto>3.2){auto=0;cur.go(1)}
+cur.update((now-t0)/1000,dt);if(cur.par){scene.rotation.y+=(ptr.x*.12-scene.rotation.y)*.08;scene.rotation.x+=(-ptr.y*.08-scene.rotation.x)*.08}renderer.render(scene,camera)})(last)}
+boot();(function(){var x=DEMOS.splice(28,1);DEMOS.length=0;DEMOS.push(x[0]);})();Catalog(DEMOS,FAM,show,hide);
+
+</script>
+</body></html>
